@@ -81,21 +81,19 @@ class Node:
     def __init__(self, name):
         self.name = name
         self.distance = float(inf)
-        self.predecessor = None
+        self.previous_node = None
 
 
 class Graph:
     def __init__(self):
         self.adj_nodes = {}
-        self.edge_distance = {}
+        self.weight = {}
 
     def add_node(self, node):
         self.adj_nodes[node] = []
 
-    def add_undirected_edge(self, node1, node2, distance):
-        self.add_directed_edge(node1, node2, distance)
-        self.add_directed_edge(node2, node1, distance)
-
-    def add_directed_edge(self, node1, node2, distance):
-        self.edge_distance[(node1, node2)] = distance
+    def add_weight(self, node1, node2, weight):
+        self.weight[(node1, node2)] = weight
         self.adj_nodes[node1].append(node2)
+
+

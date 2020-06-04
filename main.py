@@ -5,6 +5,8 @@ from math import inf
 from Packages import Package, Table, Node, Graph
 
 
+# Kyle McCray 000931226
+
 def import_packages():
     fields = []
     rows = []
@@ -77,83 +79,72 @@ def make_nodes(rows):
     return node_list
 
 
-def make_graph(rows_dict, nodes):
-    address_rows = nodes
-    address_cols = nodes
-    graph = Graph()
-
-    # create the dict key for each node
-    for node in nodes:
-        graph.add_node(node)
-
+def make_graph(rows_dict):
+    graph = []
     for i in rows_dict.keys():
         row = rows_dict[i]  # get a single row
         numbers = row[1:]  # numbers start after the second element
-        node1 = address_rows[i]
-        z = 0  # used to iterate through the col array
+        graph.append([])
+
         for distance in numbers:
-            node2 = address_cols[z]
-            if distance == str(0.0):  # if the distance is 0.0 the node1 is = node2
-                z += 1
-                continue
-            else:
-                graph.add_directed_edge(node1, node2, float(distance))
-                z += 1
+            graph[i].append(float(distance))
 
     return graph
 
 
-def shortest_path(graph, starting_node):
-    unvisited_list = []
-
-    for node in graph.adj_nodes:
-        unvisited_list.append(node)
-
-    current_node = starting_node
-    current_node.distance = 0
-
-    while len(unvisited_list) > 0:  # while we have not visited every node
-        print("THE CURRENT NODE IS " + current_node.name)
-        smallest_index = 0
-
-        for i in range(1, len(unvisited_list)):
-            if unvisited_list[i].distance < unvisited_list[smallest_index].distance:
-                smallest_index = i
-        current_node = unvisited_list.pop(smallest_index)
-
-        for adj_node in graph.adj_nodes[current_node]:  # for each key in the graph print its adjacent node
-            d1 = adj_node.distance
-            d2 = current_node.distance + graph.edge_distance[(current_node, adj_node)]
-            if d2 < d1:
-                print("Adj Node distance was " + str(d1))
-                print("Adj Node with current " + str(d2))
-                adj_node.distance = d2
-                adj_node.predecessor = current_node
-    return graph
+def fun(graph, n):
+    distance = graph
+    previous_node = [[None for i in range(27)] for x in range(27)]
+    counter = 1
+    for x in range(len(distance)):
+        for y in range(len(distance[x])):
+            if distance[x][y] != float(0.0):
+                previous_node[x][y] = x
+        counter += 1
+    for k in range(0, n):
+        for i in range(0, n):
+            for j in range(0, n):
+                if float(distance[i][j]) > float(distance[i][k]) + float(distance[k][j]):
+                    distance[i][j] = float(distance[i][k]) + float(distance[k][j])
+                    previous_node[i][j] = previous_node[k][j]
+    return distance, previous_node
 
 
-
-def get_shortest_path(start_vertex, end_vertex):
-    # Start from end_vertex and build the path backwards.
-    path = ""
-    current_vertex = end_vertex
-    while current_vertex is not start_vertex:
-        path = " -> " + str(current_vertex.name) + path
-        current_vertex = current_vertex.predecessor
-    path = start_vertex.name + path
-    return path
+def print_path(path, source, destination):
+    s = []
+    s.append(destination)
+    while path[source][destination] is not source:
+        s.insert(0, path[source][destination])
+        destination = path[source][destination]
+    print(source)
+    while len(s) > 0:
+        print(s.pop(0))
 
 
 packages_list = import_packages()
 rows_dict = import_addresses()
 nodes = make_nodes(rows_dict)
 hashTable = Table(packages_list)
-g = make_graph(rows_dict, nodes)
-g = shortest_path(g, nodes[0])
-sum_num = 0
-for node in g.adj_nodes:
-    if node.predecessor is None and node is not nodes[0]:
-        print("Hub to %s: no path exists" % node.name)
-    else:
-        print("Hub to %s: %s (total weight: %g)" % (node.name, get_shortest_path(nodes[0], node), node.distance))
+g = make_graph(rows_dict)
+g, adj_array = fun(g, 27)
+
+def route(graph, adj_array):
+    unvisited_nodes = []
+    for x in range(len(graph)):
+        unvisited_nodes.append(x)
+    current_node = 0
+    while len(unvisited_nodes) > 0:
+        unvisited_nodes[current_node] = -1
+        min_num = float(inf)
+        min_num_pos = -1
+        print("The current array row is " + str(current_node))
+        for i in graph[current_node]:
+            if i <= min_num and i != float(0.0) and unvisited_nodes.index(graph[current_node].index(i)) != -1:
+                min_num = i
+                min_num_pos = graph[current_node].index(i)
+        print(min_num)
+        print(min_num_pos)
+        current_node = min_num_pos
+
+route(g, adj_array)
 

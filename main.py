@@ -1,8 +1,7 @@
 import csv
-import operator
 from math import inf
-
-from Packages import Package, Table, Node, Graph
+from datetime import time
+from Packages import Package, Table, Node
 
 
 # Kyle McCray 000931226
@@ -74,13 +73,14 @@ def make_nodes(rows):
     for x in rows:
         address = rows[x][0]
         x = address.replace('\n', ' ')
-        node_list.append(Node(x))
+        node_list.append(x)
 
     return node_list
 
 
 def make_graph(rows_dict):
     graph = []
+
     for i in rows_dict.keys():
         row = rows_dict[i]  # get a single row
         numbers = row[1:]  # numbers start after the second element
@@ -110,41 +110,106 @@ def fun(graph, n):
     return distance, previous_node
 
 
-def print_path(path, source, destination):
-    s = []
-    s.append(destination)
-    while path[source][destination] is not source:
-        s.insert(0, path[source][destination])
-        destination = path[source][destination]
-    print(source)
-    while len(s) > 0:
-        print(s.pop(0))
-
-
-packages_list = import_packages()
-rows_dict = import_addresses()
-nodes = make_nodes(rows_dict)
-hashTable = Table(packages_list)
-g = make_graph(rows_dict)
-g, adj_array = fun(g, 27)
-
-def route(graph, adj_array):
+def shortest_route_no_restrictions(graph):
     unvisited_nodes = []
     for x in range(len(graph)):
         unvisited_nodes.append(x)
     current_node = 0
-    while len(unvisited_nodes) > 0:
-        unvisited_nodes[current_node] = -1
+    visited_distance = {}
+    while len(unvisited_nodes) > 1:  # if only one location remains in the unvisited list we are done
+        unvisited_nodes.remove(current_node)
         min_num = float(inf)
         min_num_pos = -1
         print("The current array row is " + str(current_node))
         for i in graph[current_node]:
-            if i <= min_num and i != float(0.0) and unvisited_nodes.index(graph[current_node].index(i)) != -1:
+            if i <= min_num and i != float(0.0) and unvisited_nodes.__contains__(graph[current_node].index(i)):
                 min_num = i
                 min_num_pos = graph[current_node].index(i)
-        print(min_num)
-        print(min_num_pos)
+        # print(min_num)
+        # print(min_num_pos)
+        visited_distance[current_node] = min_num
+
         current_node = min_num_pos
+    visited_distance[unvisited_nodes[0]] = float(0.0)  # this gets us the last location into are dict
+    return visited_distance
 
-route(g, adj_array)
 
+def route(graph, nodes):
+    unvisited_nodes = [0]
+    for x in nodes:
+        unvisited_nodes.append(x)
+    current_node = 0
+    visited_distance = {}
+    while len(unvisited_nodes) > 1:  # if only one location remains in the unvisited list we are done
+        unvisited_nodes.remove(current_node)
+        min_num = float(inf)
+        min_num_pos = -1
+        print("The current array row is " + str(current_node))
+        for i in graph[current_node]:
+            if i <= min_num and i != float(0.0) and unvisited_nodes.__contains__(graph[current_node].index(i)):
+                min_num = i
+                min_num_pos = graph[current_node].index(i)
+        visited_distance[current_node] = min_num
+        current_node = min_num_pos
+    visited_distance[unvisited_nodes[0]] = float(0.0)  # this gets us the last location into are dict
+    return route
+
+
+packages_list = import_packages()
+rows_dict = import_addresses()
+locations = make_nodes(rows_dict)
+hashTable = Table(packages_list)
+g = make_graph(rows_dict)
+g, adj_array = fun(g, 27)
+v = shortest_route_no_restrictions(g)
+
+DELAYED_ON_FLIGHT = [6, 25, 28, 32]
+ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
+DELIVERED_WITH_EACH_OTHER = [13, 14, 15, 16, 19, 20]
+WRONG_ADDRESS = 9
+START_TIME = time(hour=8, minute=0, second=0).isoformat()
+current_time = START_TIME
+truck_1 = []
+truck_2 = []
+
+for x in ONLY_ON_TRUCK_2:
+    truck_2.append(x)
+
+for x in DELIVERED_WITH_EACH_OTHER:
+    truck_1.append(x)
+
+for x in range(len(hashTable.array)):
+    if x in truck_1:
+        hashTable.array[x].pk_status = "On Truck1"
+
+for x in range(len(hashTable.array)):
+    if x in truck_2:
+        hashTable.array[x].pk_status = "On Truck2"
+
+# def deliver
+for x in truck_2:
+    address = hashTable.array[x].pk_address
+    address_
+
+# def check_req(id, current_time):
+#     s = time(hour=9, minute=5, second=0).isoformat()
+#     if current_time >= s and id in DELAYED_ON_FLIGHT:
+#         return True  # package can be added
+#
+#
+# for x in v.keys():
+#     address = nodes[x].name
+#     if x == 0:  # we do not have to worry about dropping packages off at the hub
+#         continue
+#
+#     for element in range(len(hashTable.array)):
+#         if hashTable.array[element] is not None:
+#             if hashTable.array[element].pk_address in address:  # if the address to deliver the package is current
+#                 # next in route add the package to truck 1
+#                 id = hashTable.array[element].pk_id
+#                 check_req(id, current_time)
+#                 hashTable.array[element].current_location = "On Truck"
+#                 truck_1[x] = id
+#
+# for x in truck_1:
+#     print(x)

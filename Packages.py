@@ -27,8 +27,8 @@ class Package:
         self.pk_notes = notes
         self.current_location = current_location
 
-    def delivered(self):
-        self.delivered_at = datetime.now()
+    def delivered(self, time):
+        self.delivered_at = time
 
 
 class Table:
@@ -41,7 +41,7 @@ class Table:
 
 
 
-    def search(self, id, address, deadline, city, zip, weight, status):
+    def search(self, id, address="", deadline="", city="", zip="", weight="", status=""):
         search_key = id
         try:
             if self.array[search_key] is None:

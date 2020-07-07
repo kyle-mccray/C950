@@ -109,52 +109,6 @@ def fun(graph, n):
                     previous_node[i][j] = previous_node[k][j]
     return distance, previous_node
 
-
-def shortest_route_no_restrictions(graph):
-    unvisited_nodes = []
-    for x in range(len(graph)):
-        unvisited_nodes.append(x)
-    current_node = 0
-    visited_distance = {}
-    while len(unvisited_nodes) > 1:  # if only one location remains in the unvisited list we are done
-        unvisited_nodes.remove(current_node)
-        min_num = float(inf)
-        min_num_pos = -1
-        print("The current array row is " + str(current_node))
-        for i in graph[current_node]:
-            if i <= min_num and i != float(0.0) and unvisited_nodes.__contains__(graph[current_node].index(i)):
-                min_num = i
-                min_num_pos = graph[current_node].index(i)
-        # print(min_num)
-        # print(min_num_pos)
-        visited_distance[current_node] = min_num
-
-        current_node = min_num_pos
-    visited_distance[unvisited_nodes[0]] = float(0.0)  # this gets us the last location into are dict
-    return visited_distance
-
-
-def route(graph, nodes):
-    unvisited_nodes = [0]
-    for x in nodes:
-        unvisited_nodes.append(x)
-    current_node = 0
-    visited_distance = {}
-    while len(unvisited_nodes) > 1:  # if only one location remains in the unvisited list we are done
-        unvisited_nodes.remove(current_node)
-        min_num = float(inf)
-        min_num_pos = -1
-        print("The current array row is " + str(current_node))
-        for i in graph[current_node]:
-            if i <= min_num and i != float(0.0) and unvisited_nodes.__contains__(graph[current_node].index(i)):
-                min_num = i
-                min_num_pos = graph[current_node].index(i)
-        visited_distance[current_node] = min_num
-        current_node = min_num_pos
-    visited_distance[unvisited_nodes[0]] = float(0.0)  # this gets us the last location into are dict
-    return route
-
-
 packages_list = import_packages()
 rows_dict = import_addresses()
 locations_list = make_nodes(rows_dict)
@@ -169,10 +123,9 @@ for x in range(len(locations_list)):
         if packages_table.array[y].pk_address in locations_list[x]:
             packages_table.array[y].address_number = x
 
-
 g = make_graph(rows_dict)
 g, adj_array = fun(g, 27)
-v = shortest_route_no_restrictions(g)
+
 
 DELAYED_ON_FLIGHT = [6, 25, 28, 32]
 ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
@@ -180,13 +133,34 @@ DELIVERED_WITH_EACH_OTHER = [13, 14, 15, 16, 19, 20]
 WRONG_ADDRESS = 9
 MPH = 18
 TOTAL_DISTANCE = 0
+HUB = 0
 START_TIME = datetime.datetime(year=2020, month=9, day=12, hour=8, minute=0, second=0)  # use a dummy date here so we
 # can use a timedelta in the future
 truck_1 = Truck(starting_time=START_TIME)
 truck_2 = Truck(starting_time=START_TIME)
 
 
-def add_packages(truck, list_of_packages):
+def add_packages(truck, list_of_packages=None):
+    if list_of_packages is None:
+        for i in range(len(packages_table.array)):
+            if truck.inv.__len__() == 16:
+                return truck
+            if packages_table.array[i] is None:
+                continue
+            elif packages_table.array[i] != WRONG_ADDRESS:
+                packages_table.array[i].pk_status = "ON TRUCK"
+                truck.inv.append(packages_table.array[i])
+                for x in range(len(packages_table.array)):
+                    if packages_table.array[x] is None:
+                        continue
+                    if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[x].pk_id != packages_table.array[i].pk_id:
+                        packages_table.array[i].pk_status = "ON TRUCK"
+                        truck.inv.append(packages_table.array[x])
+                        packages_table.array[x] = None  # remove object from table since its on a truck now
+                packages_table.array[i] = None  # remove object from table since its on a truck now
+
+        return truck
+
     for i in range(len(packages_table.array)):
         if truck.inv.__len__() == 16:
             return truck
@@ -204,16 +178,12 @@ def add_packages(truck, list_of_packages):
                     packages_table.array[x] = None  # remove object from table since its on a truck now
             packages_table.array[i] = None  # remove object from table since its on a truck now
 
+
     return truck
 
 
-truck_2 = add_packages(truck_2, ONLY_ON_TRUCK_2)
-truck_1 = add_packages(truck_1, DELIVERED_WITH_EACH_OTHER)
-
-
-def deliver(g, truck, delivered_packages):
+def deliver(g, truck, delivered_packages, more_packages_to_deliver=None):
     global TOTAL_DISTANCE
-    HUB = 0
     # this function requires trucks to be at the hub to work properly
     truck.inv.insert(0, 0)
     start = truck.inv.pop(0)
@@ -233,28 +203,77 @@ def deliver(g, truck, delivered_packages):
         truck_travel_time = (distance / MPH)
         truck.time += datetime.timedelta(hours=truck_travel_time)
         truck.current_location = current_stop
-        print("The truck is currently at location " + str(start) + " the time is " + str(truck.time.time()))
+        # print("The truck is currently at location " + str(start) + " the time is " + str(truck.time.time()))
         for x in truck.inv:
             if x.address_number == current_stop:  # deliver all packages on truck that require this location
                 x.delivered(truck.time.time())
                 x.pk_status = "DELIVERED"
                 truck.inv.remove(x)
                 delivered_packages.insert_package(x)
-                print("Package Number " + str(x.pk_id) + " was delivered ")
+                print("Package Number " + str(x.pk_id) + " was delivered " + " at location " + str(truck.current_location) + " at " + str(truck.time.time()))
         final_location = current_stop
 
+    if not more_packages_to_deliver:
+        return
     distance = g[final_location][HUB]
+    TOTAL_DISTANCE += distance
     truck_travel_time = (distance / MPH)
     truck.time += datetime.timedelta(hours=truck_travel_time)
     truck.current_location = HUB
 
 
+truck_2 = add_packages(truck_2, ONLY_ON_TRUCK_2)
+truck_1 = add_packages(truck_1, DELIVERED_WITH_EACH_OTHER)
+
 deliver(g, truck_2, delivered_packages)
-deliver(g, truck_1, delivered_packages)
-print(TOTAL_DISTANCE)
-print(truck_1.time)
-print("   ")
 print(truck_2.time)
 
+deliver(g, truck_1, delivered_packages)
+print(truck_1.time)
+
+truck_1 = add_packages(truck_1, DELAYED_ON_FLIGHT)
+deliver(g, truck_1, delivered_packages)
+print(truck_1.time)
+x = input("The time is 10:21 would you like to update the address for package 9? \n"
+          "Y = Yes, N = No ")
+
+if x.lower() == "y":
+    packages_table.array[9].pk_address = "410 S State St"
+    packages_table.array[9].pk_city = "Salt Lake City"
+    packages_table.array[9].pk_state = "UT"
+    packages_table.array[9].pk_zip = 84111
+    packages_table.array[9].address_number = 18
+    WRONG_ADDRESS = None
+else:
+    print("Package address will not be updated and package will NOT be delivered")
+
+truck_2 = add_packages(truck_2)
+deliver(g, truck_2, delivered_packages, more_packages_to_deliver=False)
+print(truck_2.time)
+
+truck_1 = add_packages(truck_1)
+deliver(g, truck_1, delivered_packages, more_packages_to_deliver=False)
+print(truck_1.time)
+print(truck_2.time)
+
+
+
+print("The Total distance traveled was " + str(TOTAL_DISTANCE))
+print("The time for Truck 1 is " + str(truck_1.time.time()))
+print("The time for Truck 2 is " + str(truck_2.time.time()))
+
+
+for x in range(len(delivered_packages.array)):
+    if delivered_packages.array[x] is None:
+        continue
+    if delivered_packages.array[x].pk_deadline == "EOD":
+        continue
+    if delivered_packages.array[x].pk_deadline == "10:30 AM":
+        time = delivered_packages.array[x].delivered_at
+        time_string = str(time).split(":")
+        hours = time_string[0]
+        x = time_string[1].split()
+        min = x[0]
+        assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=10, minutes=30)
 
 

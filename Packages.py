@@ -5,7 +5,8 @@ from math import inf
 class Package:
 
     def __init__(self, id, address="", city="", state="", zip=-1, weight=-1, deadline=-1, notes=-1
-                 , current_location=-1, address_number=-1):
+                 , current_location=-1, address_number=-1, time=None):
+        self.delivered_at = time
         self.pk_id = id
         self.pk_address = address
         self.pk_city = city
@@ -16,7 +17,6 @@ class Package:
         self.pk_notes = notes
         self.pk_status = current_location
         self.address_number = address_number
-        self.associated_packages = []
 
     def delivered(self, time):
         self.delivered_at = time

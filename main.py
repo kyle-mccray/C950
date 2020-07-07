@@ -109,6 +109,7 @@ def fun(graph, n):
                     previous_node[i][j] = previous_node[k][j]
     return distance, previous_node
 
+
 packages_list = import_packages()
 rows_dict = import_addresses()
 locations_list = make_nodes(rows_dict)
@@ -126,7 +127,6 @@ for x in range(len(locations_list)):
 g = make_graph(rows_dict)
 g, adj_array = fun(g, 27)
 
-
 DELAYED_ON_FLIGHT = [6, 25, 28, 32]
 ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
 DELIVERED_WITH_EACH_OTHER = [13, 14, 15, 16, 19, 20]
@@ -143,24 +143,23 @@ truck_2 = Truck(starting_time=START_TIME)
 def add_packages(truck, list_of_packages=None):
     if list_of_packages is None:
         for i in range(len(packages_table.array)):
-            if truck.inv.__len__() == 16:
+            if truck.inv.__len__() == 11:
                 return truck
             if packages_table.array[i] is None:
                 continue
-            elif packages_table.array[i] != WRONG_ADDRESS:
+            if i != WRONG_ADDRESS:
                 packages_table.array[i].pk_status = "ON TRUCK"
                 truck.inv.append(packages_table.array[i])
                 for x in range(len(packages_table.array)):
                     if packages_table.array[x] is None:
                         continue
-                    if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[x].pk_id != packages_table.array[i].pk_id:
+                    if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[
+                        x].pk_id != packages_table.array[i].pk_id:
                         packages_table.array[i].pk_status = "ON TRUCK"
                         truck.inv.append(packages_table.array[x])
                         packages_table.array[x] = None  # remove object from table since its on a truck now
                 packages_table.array[i] = None  # remove object from table since its on a truck now
-
         return truck
-
     for i in range(len(packages_table.array)):
         if truck.inv.__len__() == 16:
             return truck
@@ -172,17 +171,17 @@ def add_packages(truck, list_of_packages=None):
             for x in range(len(packages_table.array)):
                 if packages_table.array[x] is None:
                     continue
-                if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[x].pk_id != packages_table.array[i].pk_id:
+                if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[
+                    x].pk_id != packages_table.array[i].pk_id:
                     packages_table.array[i].pk_status = "ON TRUCK"
                     truck.inv.append(packages_table.array[x])
                     packages_table.array[x] = None  # remove object from table since its on a truck now
             packages_table.array[i] = None  # remove object from table since its on a truck now
 
-
     return truck
 
 
-def deliver(g, truck, delivered_packages, more_packages_to_deliver=None):
+def deliver(g, truck, delivered_packages, no_more_packages=None):
     global TOTAL_DISTANCE
     # this function requires trucks to be at the hub to work properly
     truck.inv.insert(0, 0)
@@ -210,10 +209,11 @@ def deliver(g, truck, delivered_packages, more_packages_to_deliver=None):
                 x.pk_status = "DELIVERED"
                 truck.inv.remove(x)
                 delivered_packages.insert_package(x)
-                print("Package Number " + str(x.pk_id) + " was delivered " + " at location " + str(truck.current_location) + " at " + str(truck.time.time()))
+                print("Package Number " + str(x.pk_id) + " was delivered " + " at location " + str(
+                    truck.current_location) + " at " + str(truck.time.time()))
         final_location = current_stop
 
-    if not more_packages_to_deliver:
+    if no_more_packages:
         return
     distance = g[final_location][HUB]
     TOTAL_DISTANCE += distance
@@ -248,20 +248,17 @@ else:
     print("Package address will not be updated and package will NOT be delivered")
 
 truck_2 = add_packages(truck_2)
-deliver(g, truck_2, delivered_packages, more_packages_to_deliver=False)
+deliver(g, truck_2, delivered_packages, no_more_packages=True)
 print(truck_2.time)
 
 truck_1 = add_packages(truck_1)
-deliver(g, truck_1, delivered_packages, more_packages_to_deliver=False)
+deliver(g, truck_1, delivered_packages, no_more_packages=True)
 print(truck_1.time)
 print(truck_2.time)
-
-
 
 print("The Total distance traveled was " + str(TOTAL_DISTANCE))
 print("The time for Truck 1 is " + str(truck_1.time.time()))
 print("The time for Truck 2 is " + str(truck_2.time.time()))
-
 
 for x in range(len(delivered_packages.array)):
     if delivered_packages.array[x] is None:
@@ -269,11 +266,13 @@ for x in range(len(delivered_packages.array)):
     if delivered_packages.array[x].pk_deadline == "EOD":
         continue
     if delivered_packages.array[x].pk_deadline == "10:30 AM":
+        pkg = delivered_packages.array[x]
         time = delivered_packages.array[x].delivered_at
         time_string = str(time).split(":")
         hours = time_string[0]
         x = time_string[1].split()
         min = x[0]
-        assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=10, minutes=30)
+        assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=10, minutes=30), str(pkg.pk_id)
 
-
+for x in range(len(packages_table.array)):
+    assert packages_table.array[x] is None

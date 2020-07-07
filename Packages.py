@@ -34,9 +34,17 @@ class Table:
         search_key = id
         try:
             if self.array[search_key] is None:
+                print("No packages found")
                 return None
             else:
-                return self.array[search_key]
+                print(self.array[search_key].pk_id)
+                print(self.array[search_key].pk_address)
+                print(self.array[search_key].pk_deadline)
+                print(self.array[search_key].pk_city)
+                print(self.array[search_key].pk_zip)
+                print(self.array[search_key].pk_weight)
+                print(self.array[search_key].pk_status)
+
         except IndexError:
             return IndexError
 

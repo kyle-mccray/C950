@@ -1,7 +1,7 @@
 import csv
+import datetime
 from math import inf
-from datetime import time
-from Packages import Package, Table, Node
+from Packages import Package, Table, Node, Truck
 
 
 # Kyle McCray 000931226
@@ -26,7 +26,7 @@ def import_packages():
         deadline = row[5]
         weight = row[6]
         notes = row[7]
-        pkgs_at_hub.append(Package(id, address, city, state, zip, deadline, weight, notes, "At_Hub"))
+        pkgs_at_hub.append(Package(id, address, city, state, zip, weight, deadline, notes, "At_Hub"))
 
     return pkgs_at_hub
 
@@ -157,8 +157,19 @@ def route(graph, nodes):
 
 packages_list = import_packages()
 rows_dict = import_addresses()
-locations = make_nodes(rows_dict)
-hashTable = Table(packages_list)
+locations_list = make_nodes(rows_dict)
+delivered_packages = Table(None)
+packages_table = Table(packages_list)
+
+# assign each package the location number
+for x in range(len(locations_list)):
+    for y in range(len(packages_table.array)):
+        if packages_table.array[y] is None:
+            continue
+        if packages_table.array[y].pk_address in locations_list[x]:
+            packages_table.array[y].address_number = x
+
+
 g = make_graph(rows_dict)
 g, adj_array = fun(g, 27)
 v = shortest_route_no_restrictions(g)
@@ -167,49 +178,83 @@ DELAYED_ON_FLIGHT = [6, 25, 28, 32]
 ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
 DELIVERED_WITH_EACH_OTHER = [13, 14, 15, 16, 19, 20]
 WRONG_ADDRESS = 9
-START_TIME = time(hour=8, minute=0, second=0).isoformat()
-current_time = START_TIME
-truck_1 = []
-truck_2 = []
+MPH = 18
+TOTAL_DISTANCE = 0
+START_TIME = datetime.datetime(year=2020, month=9, day=12, hour=8, minute=0, second=0)  # use a dummy date here so we
+# can use a timedelta in the future
+truck_1 = Truck(starting_time=START_TIME)
+truck_2 = Truck(starting_time=START_TIME)
 
-for x in ONLY_ON_TRUCK_2:
-    truck_2.append(x)
 
-for x in DELIVERED_WITH_EACH_OTHER:
-    truck_1.append(x)
+def add_packages(truck, list_of_packages):
+    for i in range(len(packages_table.array)):
+        if truck.inv.__len__() == 16:
+            return truck
+        if packages_table.array[i] is None:
+            continue
+        if i in list_of_packages and i != WRONG_ADDRESS:
+            packages_table.array[i].pk_status = "ON TRUCK"
+            truck.inv.append(packages_table.array[i])
+            for x in range(len(packages_table.array)):
+                if packages_table.array[x] is None:
+                    continue
+                if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[x].pk_id != packages_table.array[i].pk_id:
+                    packages_table.array[i].pk_status = "ON TRUCK"
+                    truck.inv.append(packages_table.array[x])
+                    packages_table.array[x] = None  # remove object from table since its on a truck now
+            packages_table.array[i] = None  # remove object from table since its on a truck now
 
-for x in range(len(hashTable.array)):
-    if x in truck_1:
-        hashTable.array[x].pk_status = "On Truck1"
+    return truck
 
-for x in range(len(hashTable.array)):
-    if x in truck_2:
-        hashTable.array[x].pk_status = "On Truck2"
 
-# def deliver
-for x in truck_2:
-    address = hashTable.array[x].pk_address
-    address_
+truck_2 = add_packages(truck_2, ONLY_ON_TRUCK_2)
+truck_1 = add_packages(truck_1, DELIVERED_WITH_EACH_OTHER)
 
-# def check_req(id, current_time):
-#     s = time(hour=9, minute=5, second=0).isoformat()
-#     if current_time >= s and id in DELAYED_ON_FLIGHT:
-#         return True  # package can be added
-#
-#
-# for x in v.keys():
-#     address = nodes[x].name
-#     if x == 0:  # we do not have to worry about dropping packages off at the hub
-#         continue
-#
-#     for element in range(len(hashTable.array)):
-#         if hashTable.array[element] is not None:
-#             if hashTable.array[element].pk_address in address:  # if the address to deliver the package is current
-#                 # next in route add the package to truck 1
-#                 id = hashTable.array[element].pk_id
-#                 check_req(id, current_time)
-#                 hashTable.array[element].current_location = "On Truck"
-#                 truck_1[x] = id
-#
-# for x in truck_1:
-#     print(x)
+
+def deliver(g, truck, delivered_packages):
+    global TOTAL_DISTANCE
+    HUB = 0
+    # this function requires trucks to be at the hub to work properly
+    truck.inv.insert(0, 0)
+    start = truck.inv.pop(0)
+    final_location = -1
+    while truck.inv.__len__() > 0:
+        distance = float(inf)
+        current_stop = -1
+        for x in truck.inv:
+            z = x.address_number
+            if g[start][z] < distance:
+                distance = g[start][z]
+                current_stop = z
+        start = current_stop
+        # Time = D/S
+        # 18 Mph is how fast the truck goes
+        TOTAL_DISTANCE += distance
+        truck_travel_time = (distance / MPH)
+        truck.time += datetime.timedelta(hours=truck_travel_time)
+        truck.current_location = current_stop
+        print("The truck is currently at location " + str(start) + " the time is " + str(truck.time.time()))
+        for x in truck.inv:
+            if x.address_number == current_stop:  # deliver all packages on truck that require this location
+                x.delivered(truck.time.time())
+                x.pk_status = "DELIVERED"
+                truck.inv.remove(x)
+                delivered_packages.insert_package(x)
+                print("Package Number " + str(x.pk_id) + " was delivered ")
+        final_location = current_stop
+
+    distance = g[final_location][HUB]
+    truck_travel_time = (distance / MPH)
+    truck.time += datetime.timedelta(hours=truck_travel_time)
+    truck.current_location = HUB
+
+
+deliver(g, truck_2, delivered_packages)
+deliver(g, truck_1, delivered_packages)
+print(TOTAL_DISTANCE)
+print(truck_1.time)
+print("   ")
+print(truck_2.time)
+
+
+

@@ -136,48 +136,51 @@ TOTAL_DISTANCE = 0
 HUB = 0
 START_TIME = datetime.datetime(year=2020, month=9, day=12, hour=8, minute=0, second=0)  # use a dummy date here so we
 # can use a timedelta in the future
-truck_1 = Truck(starting_time=START_TIME)
-truck_2 = Truck(starting_time=START_TIME)
+truck_1 = Truck(starting_time=START_TIME, name="Truck 1")
+truck_2 = Truck(starting_time=START_TIME, name="Truck 2")
 
 
-def add_packages(truck, list_of_packages=None):
-    if list_of_packages is None:
-        for i in range(len(packages_table.array)):
-            if truck.inv.__len__() == 11:
-                return truck
-            if packages_table.array[i] is None:
-                continue
-            if i != WRONG_ADDRESS:
-                packages_table.array[i].pk_status = "ON TRUCK"
-                truck.inv.append(packages_table.array[i])
-                for x in range(len(packages_table.array)):
-                    if packages_table.array[x] is None:
-                        continue
-                    if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[
-                        x].pk_id != packages_table.array[i].pk_id:
-                        packages_table.array[i].pk_status = "ON TRUCK"
-                        truck.inv.append(packages_table.array[x])
-                        packages_table.array[x] = None  # remove object from table since its on a truck now
-                packages_table.array[i] = None  # remove object from table since its on a truck now
-        return truck
-    for i in range(len(packages_table.array)):
+def add_packages(truck, packages_to_add=None):
+    for obj in range(len(packages_table.array)):
+        # add every package in the list and any other packages going to the same
+        # destination
+        if packages_to_add is None:
+            break
         if truck.inv.__len__() == 16:
             return truck
-        if packages_table.array[i] is None:
+        if packages_table.array[obj] is None:
             continue
-        if i in list_of_packages and i != WRONG_ADDRESS:
-            packages_table.array[i].pk_status = "ON TRUCK"
-            truck.inv.append(packages_table.array[i])
+        if obj in packages_to_add:
+            truck.inv.append(packages_table.array[obj])
             for x in range(len(packages_table.array)):
                 if packages_table.array[x] is None:
                     continue
-                if packages_table.array[x].pk_address == packages_table.array[i].pk_address and packages_table.array[
-                    x].pk_id != packages_table.array[i].pk_id:
-                    packages_table.array[i].pk_status = "ON TRUCK"
+                if packages_table.array[obj] != packages_table.array[x] and packages_table.array[obj].address_number == \
+                        packages_table.array[x].address_number and x != WRONG_ADDRESS:
                     truck.inv.append(packages_table.array[x])
-                    packages_table.array[x] = None  # remove object from table since its on a truck now
-            packages_table.array[i] = None  # remove object from table since its on a truck now
+                    packages_table.array[x] = None
+            packages_table.array[obj] = None
 
+    for obj in range(len(packages_table.array)):  # fill up the truck with the rest of packages
+        if truck.inv.__len__() == 16:
+            return truck
+        if packages_table.array[obj] is None:
+            continue
+        if obj not in DELAYED_ON_FLIGHT and obj not in ONLY_ON_TRUCK_2 and obj not in DELIVERED_WITH_EACH_OTHER and obj != WRONG_ADDRESS:
+            truck.inv.append(packages_table.array[obj])
+            temp_obj = packages_table.array[obj]
+            packages_table.array[obj] = None
+            if truck.inv.__len__() == 16:
+                return truck
+            for x in range(len(packages_table.array)):
+                if truck.inv.__len__() == 16:
+                    return truck
+                if packages_table.array[x] is None:
+                    continue
+                if temp_obj != packages_table.array[x] and temp_obj.address_number == \
+                        packages_table.array[x].address_number and x != WRONG_ADDRESS:
+                    truck.inv.append(packages_table.array[x])
+                    packages_table.array[x] = None
     return truck
 
 
@@ -209,8 +212,8 @@ def deliver(g, truck, delivered_packages, no_more_packages=None):
                 x.pk_status = "DELIVERED"
                 truck.inv.remove(x)
                 delivered_packages.insert_package(x)
-                print("Package Number " + str(x.pk_id) + " was delivered " + " at location " + str(
-                    truck.current_location) + " at " + str(truck.time.time()))
+                # print("Package Number " + str(x.pk_id) + " was delivered " + " at location " + str(
+                #     truck.current_location) + " at " + str(truck.time.time()) + " on " + truck.name)
         final_location = current_stop
 
     if no_more_packages:
@@ -222,57 +225,104 @@ def deliver(g, truck, delivered_packages, no_more_packages=None):
     truck.current_location = HUB
 
 
-truck_2 = add_packages(truck_2, ONLY_ON_TRUCK_2)
-truck_1 = add_packages(truck_1, DELIVERED_WITH_EACH_OTHER)
+def run(truck_1, truck_2):
+    global WRONG_ADDRESS
+    truck_1 = add_packages(truck_1, DELIVERED_WITH_EACH_OTHER)
 
-deliver(g, truck_2, delivered_packages)
-print(truck_2.time)
+    deliver(g, truck_1, delivered_packages)
 
-deliver(g, truck_1, delivered_packages)
-print(truck_1.time)
+    truck_2 = add_packages(truck_2, ONLY_ON_TRUCK_2)
 
-truck_1 = add_packages(truck_1, DELAYED_ON_FLIGHT)
-deliver(g, truck_1, delivered_packages)
-print(truck_1.time)
-x = input("The time is 10:21 would you like to update the address for package 9? \n"
-          "Y = Yes, N = No ")
+    deliver(g, truck_2, delivered_packages, no_more_packages=True)
 
-if x.lower() == "y":
+    truck_1 = add_packages(truck_1, DELAYED_ON_FLIGHT)
+    deliver(g, truck_1, delivered_packages)
+    # updating the package at 10:28
     packages_table.array[9].pk_address = "410 S State St"
     packages_table.array[9].pk_city = "Salt Lake City"
     packages_table.array[9].pk_state = "UT"
     packages_table.array[9].pk_zip = 84111
     packages_table.array[9].address_number = 18
     WRONG_ADDRESS = None
-else:
-    print("Package address will not be updated and package will NOT be delivered")
+    truck_1 = add_packages(truck_1, packages_to_add=None)
+    deliver(g, truck_1, delivered_packages, no_more_packages=True)
 
-truck_2 = add_packages(truck_2)
-deliver(g, truck_2, delivered_packages, no_more_packages=True)
-print(truck_2.time)
 
-truck_1 = add_packages(truck_1)
-deliver(g, truck_1, delivered_packages, no_more_packages=True)
-print(truck_1.time)
-print(truck_2.time)
+def test():
+    for x in range(len(delivered_packages.array)):
+        if delivered_packages.array[x] is None:
+            continue
+        if delivered_packages.array[x].pk_deadline == "EOD":
+            continue
 
-print("The Total distance traveled was " + str(TOTAL_DISTANCE))
-print("The time for Truck 1 is " + str(truck_1.time.time()))
-print("The time for Truck 2 is " + str(truck_2.time.time()))
+        if delivered_packages.array[x].pk_deadline == "10:30 AM":
+            pkg = delivered_packages.array[x]
+            time = delivered_packages.array[x].delivered_at
+            time_string = str(time).split(":")
+            hours = time_string[0]
+            x = time_string[1].split()
+            min = x[0]
+            assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=10,
+                                                                                                minutes=30), str(
+                pkg.pk_id)
+        elif delivered_packages.array[x].pk_deadline == "9:00 AM":
+            pkg = delivered_packages.array[x]
+            time = delivered_packages.array[x].delivered_at
+            time_string = str(time).split(":")
+            hours = time_string[0]
+            x = time_string[1].split()
+            min = x[0]
+            assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=9,
+                                                                                                minutes=0), str(
+                pkg.pk_id)
+        elif x in DELAYED_ON_FLIGHT:
+            pkg = delivered_packages.array[x]
+            time = delivered_packages.array[x].delivered_at
+            time_string = str(time).split(":")
+            hours = time_string[0]
+            x = time_string[1].split()
+            min = x[0]
+            assert datetime.timedelta(hours=int(hours), minutes=int(min)) >= datetime.timedelta(hours=9,
+                                                                                                minutes=5), str(
+                pkg.pk_id)
 
-for x in range(len(delivered_packages.array)):
-    if delivered_packages.array[x] is None:
-        continue
-    if delivered_packages.array[x].pk_deadline == "EOD":
-        continue
-    if delivered_packages.array[x].pk_deadline == "10:30 AM":
-        pkg = delivered_packages.array[x]
-        time = delivered_packages.array[x].delivered_at
-        time_string = str(time).split(":")
-        hours = time_string[0]
-        x = time_string[1].split()
-        min = x[0]
-        assert datetime.timedelta(hours=int(hours), minutes=int(min)) <= datetime.timedelta(hours=10, minutes=30), str(pkg.pk_id)
+    pkg = delivered_packages.array[9]
+    time = delivered_packages.array[9].delivered_at
+    time_string = str(time).split(":")
+    hours = time_string[0]
+    x = time_string[1].split()
+    min = x[0]
+    assert datetime.timedelta(hours=int(hours), minutes=int(min)) >= datetime.timedelta(hours=10, minutes=20), str(
+        pkg.pk_id)
 
-for x in range(len(packages_table.array)):
-    assert packages_table.array[x] is None
+
+run(truck_1, truck_2)
+test()
+
+
+def main():
+    print("Welcome to the package delivery system")
+    print("The last simulation finished in {0:.1f} miles".format(TOTAL_DISTANCE))
+    print("Please review the following options. Type exit to end")
+    answer = -1
+    while answer != "exit".lower():
+        print("\n")
+        print("1. View the package status for all packages between 8:35 a.m. and 9:25 a.m.")
+        print("2. View the package status for all packages between 9:35 a.m. and 10:25 a.m.")
+        print("3. View the package status for all packages between 12:03 p.m. and 1:12 p.m.")
+        print("4. View a single package at a time of your choosing")
+        answer = input()
+
+        if answer == 1:
+            pass
+        elif answer == 2:
+            pass
+        elif answer == 3:
+            pass
+        elif answer == 4:
+            pass
+        pass
+
+def status_lookup(start_time=None, end_time=None):
+    pass
+main()

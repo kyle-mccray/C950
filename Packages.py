@@ -5,7 +5,7 @@ from math import inf
 class Package:
 
     def __init__(self, id, address="", city="", state="", zip=-1, weight=-1, deadline=-1, notes=-1
-                 , current_location=-1, address_number=-1, time=None):
+                 , current_location=-1, address_number=-1, time=None, on_truck=None):
         self.delivered_at = time
         self.pk_id = id
         self.pk_address = address
@@ -17,9 +17,13 @@ class Package:
         self.pk_notes = notes
         self.pk_status = current_location
         self.address_number = address_number
+        self.on_truck = on_truck
 
     def delivered(self, time):
         self.delivered_at = time
+
+    def on_truck(self, time):
+        self.on_truck = time
 
 
 class Table:
@@ -34,7 +38,6 @@ class Table:
         search_key = id
         try:
             if self.array[search_key] is None:
-                print("No packages found")
                 return None
             else:
                 print(self.array[search_key].pk_id)
@@ -76,7 +79,7 @@ class Table:
                 self.array[myPkg.pk_id] = myPkg
                 return
             if self.array[myPkg.pk_id] is not None:
-                print("ERROR ID IN USE")
+                print(str(myPkg.pk_id) + " ERROR ID IN USE")
                 return
         except IndexError:
             # If the bucket is not in the array extend the array to the bucket size then insert the package
@@ -113,7 +116,8 @@ class Graph:
 
 
 class Truck:
-    def __init__(self, starting_time, current_location=None):
+    def __init__(self, starting_time, current_location=None, name=None):
         self.inv = []
         self.time = starting_time
         self.current_location = current_location
+        self.name = name

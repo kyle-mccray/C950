@@ -26,7 +26,7 @@ def import_packages():
         deadline = row[5]
         weight = row[6]
         notes = row[7]
-        pkgs_at_hub.append(Package(id, address, city, state, zip, weight, deadline, notes, "At_Hub"))
+        pkgs_at_hub.append(Package(id, address, city, state, zip, weight, deadline, notes, "AT HUB"))
 
     return pkgs_at_hub
 
@@ -147,7 +147,7 @@ def add_packages(truck, packages_to_add=None):
         if packages_to_add is None:
             break
         if truck.inv.__len__() == 16:
-            return truck
+           break
         if packages_table.array[obj] is None:
             continue
         if obj in packages_to_add:
@@ -163,7 +163,7 @@ def add_packages(truck, packages_to_add=None):
 
     for obj in range(len(packages_table.array)):  # fill up the truck with the rest of packages
         if truck.inv.__len__() == 16:
-            return truck
+            break
         if packages_table.array[obj] is None:
             continue
         if obj not in DELAYED_ON_FLIGHT and obj not in ONLY_ON_TRUCK_2 and obj not in DELIVERED_WITH_EACH_OTHER and obj != WRONG_ADDRESS:
@@ -171,16 +171,20 @@ def add_packages(truck, packages_to_add=None):
             temp_obj = packages_table.array[obj]
             packages_table.array[obj] = None
             if truck.inv.__len__() == 16:
-                return truck
+                break
             for x in range(len(packages_table.array)):
                 if truck.inv.__len__() == 16:
-                    return truck
+                   break
                 if packages_table.array[x] is None:
                     continue
                 if temp_obj != packages_table.array[x] and temp_obj.address_number == \
                         packages_table.array[x].address_number and x != WRONG_ADDRESS:
                     truck.inv.append(packages_table.array[x])
                     packages_table.array[x] = None
+
+    for x in truck.inv:
+        x.pk_status = "ON TRUCK"
+        x.on_truck_at = truck.time.time()
     return truck
 
 
@@ -314,15 +318,19 @@ def main():
         answer = input()
 
         if answer == 1:
-            pass
+            status_lookup(datetime.timedelta(hours=8, minutes=35), datetime.timedelta(hours=9, minutes=25))
         elif answer == 2:
-            pass
+            status_lookup(datetime.timedelta(hours=9, minutes=35), datetime.timedelta(hours=10, minutes=25))
         elif answer == 3:
-            pass
+            status_lookup(datetime.timedelta(hours=12, minutes=3), datetime.timedelta(hours=13, minutes=12))
         elif answer == 4:
             pass
         pass
 
 def status_lookup(start_time=None, end_time=None):
-    pass
+    start_time = start_time
+    end_time = end_time
+
+
+
 main()

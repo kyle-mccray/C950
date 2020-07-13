@@ -5,7 +5,7 @@ from math import inf
 class Package:
 
     def __init__(self, id, address="", city="", state="", zip=-1, weight=-1, deadline=-1, notes=-1
-                 , current_location=-1, address_number=-1, time=None):
+                 , address_number=-1, time=None):
         self.delivered_at = time
         self.pk_id = id
         self.pk_address = address
@@ -15,15 +15,14 @@ class Package:
         self.pk_weight = weight
         self.pk_deadline = deadline
         self.pk_notes = notes
-        self.pk_status = current_location
+        self.pk_status = []
         self.address_number = address_number
-        self.on_truck_at = time
 
     def delivered(self, time):
         self.delivered_at = time
 
-    def on_truck(self, time):
-        self.on_truck_at = time
+    def update_status(self, status, time):
+        self.pk_status.append([status, time])
 
 
 class Table:

@@ -97,20 +97,13 @@ def make_graph(rows_dict):
 
 def fun(graph, n):
     distance = graph
-    previous_node = [[None for i in range(27)] for x in range(27)]
-    counter = 1
-    for x in range(len(distance)):
-        for y in range(len(distance[x])):
-            if distance[x][y] != float(0.0):
-                previous_node[x][y] = x
-        counter += 1
     for k in range(0, n):
         for i in range(0, n):
             for j in range(0, n):
                 if float(distance[i][j]) > float(distance[i][k]) + float(distance[k][j]):
                     distance[i][j] = float(distance[i][k]) + float(distance[k][j])
-                    previous_node[i][j] = previous_node[k][j]
-    return distance, previous_node
+
+    return distance
 
 
 packages_list = import_packages()
@@ -127,9 +120,8 @@ for x in range(len(locations_list)):
         if packages_table.array[y].pk_address in locations_list[x]:
             packages_table.array[y].address_number = x
 
-
 g = make_graph(rows_dict)
-g, adj_array = fun(g, 27)
+g = fun(g, 27)
 
 DELAYED_ON_FLIGHT = [6, 25, 28, 32]
 ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
@@ -140,8 +132,9 @@ TOTAL_DISTANCE = 0
 HUB = 0
 START_TIME = datetime.datetime(year=2020, month=9, day=12, hour=8, minute=0, second=0)  # use a dummy date here so we
 # can use a timedelta in the future
-truck_1 = Truck(starting_time=START_TIME, name="Truck 1")
-truck_2 = Truck(starting_time=START_TIME, name="Truck 2")
+truck_1 = Truck(starting_time=START_TIME, current_location=0, name="Truck 1")
+truck_2 = Truck(starting_time=START_TIME, current_location=0, name="Truck 2")
+
 
 def add_packages(truck, packages_to_add=None):
     for obj in range(len(packages_table.array)):
@@ -188,15 +181,14 @@ def add_packages(truck, packages_to_add=None):
     for x in truck.inv:
         x.update_status("ON TRUCK", truck.time.time())
 
-
     return truck
 
 
 def deliver(g, truck, delivered_packages, no_more_packages=None):
     global TOTAL_DISTANCE
     # this function requires trucks to be at the hub to work properly
-    truck.inv.insert(0, 0)
-    start = truck.inv.pop(0)
+    assert truck.current_location == 0
+    start = HUB
     final_location = -1
     while truck.inv.__len__() > 0:
         distance = float(inf)
@@ -324,15 +316,16 @@ def main():
         if answer == "1":
             status_lookup(datetime.time(hour=9, minute=0))
         elif answer == "2":
-            status_lookup(datetime.time(hour=9, minute=35))
+            status_lookup(datetime.time(hour=10, minute=0))
         elif answer == "3":
-            status_lookup(datetime.time(hour=12, minute=3))
+            status_lookup(datetime.time(hour=12, minute=5))
         elif answer == "4":
             try:
                 pkg_id = input("Please enter the package number you would like to look up. E.g. 23" "\n")
                 str_time = input("Please enter in a time in 24Hr standard. E.g. 12:09" "\n")
                 split_time = str_time.split(":")
-                status_lookup(datetime.time(hour=int(split_time[0]), minute=int(split_time[1])), package_number=int(pkg_id))
+                status_lookup(datetime.time(hour=int(split_time[0]), minute=int(split_time[1])),
+                              package_number=int(pkg_id))
             except Exception:
                 print("An error has occurred please check your input")
 
@@ -341,30 +334,36 @@ def status_lookup(start_time, package_number=None):
     start_time = start_time
 
     if package_number is not None:
-        if delivered_packages.array[package_number].delivered_at == start_time or delivered_packages.array[package_number].delivered_at < start_time:
-            print("Package #"+ str(delivered_packages.array[package_number].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[package_number].pk_status[2][0])
+        if delivered_packages.array[package_number].delivered_at == start_time or delivered_packages.array[
+            package_number].delivered_at < start_time:
+            print("Package #" + str(delivered_packages.array[package_number].pk_id) + " current status at " + str(
+                start_time) + " is " + delivered_packages.array[package_number].pk_status[2][0])
         # if the delivery time is between the two times the package was delivered already
         elif delivered_packages.array[package_number].pk_status[1][1] <= start_time:
-            print("Package #"+ str(delivered_packages.array[package_number].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[package_number].pk_status[1][0])
+            print("Package #" + str(delivered_packages.array[package_number].pk_id) + " current status at " + str(
+                start_time) + " is " + delivered_packages.array[package_number].pk_status[1][0])
         # if the package was not delivered we check to see if the package on truck time is between the
         else:
-            print("Package #"+ str(delivered_packages.array[package_number].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[package_number].pk_status[0][0])
+            print("Package #" + str(delivered_packages.array[package_number].pk_id) + " current status at " + str(
+                start_time) + " is " + delivered_packages.array[package_number].pk_status[0][0])
         # if the package is not delivered yet nor on the truck then it can only be at the HUB
-    else:
+    elif package_number is None:
         for x in range(len(delivered_packages.array)):
             if delivered_packages.array[x] is None:
                 continue
-            if delivered_packages.array[x].delivered_at == start_time or delivered_packages.array[x].delivered_at < start_time:
-                print("Package #"+ str(delivered_packages.array[x].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[x].pk_status[2][0])
+            if delivered_packages.array[x].delivered_at == start_time or delivered_packages.array[
+                x].delivered_at < start_time:
+                print("Package #" + str(delivered_packages.array[x].pk_id) + " current status at " + str(
+                    start_time) + " is " + delivered_packages.array[x].pk_status[2][0])
                 # if the delivery time is between the two times the package was delivered already
             elif delivered_packages.array[x].pk_status[1][1] <= start_time:
-                print("Package #"+ str(delivered_packages.array[x].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[x].pk_status[1][0])
+                print("Package #" + str(delivered_packages.array[x].pk_id) + " current status at " + str(
+                    start_time) + " is " + delivered_packages.array[x].pk_status[1][0])
                 # if the package was not delivered we check to see if the package on truck time is between the
             else:
-                print("Package #"+ str(delivered_packages.array[x].pk_id) + " current status at " + str(start_time) +" is " + delivered_packages.array[x].pk_status[0][0])
+                print("Package #" + str(delivered_packages.array[x].pk_id) + " current status at " + str(
+                    start_time) + " is " + delivered_packages.array[x].pk_status[0][0])
                 # if the package is not delivered yet nor on the truck then it can only be at the HUB
-
-
 
 
 main()

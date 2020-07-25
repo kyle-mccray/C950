@@ -1,24 +1,22 @@
 import csv
 import datetime
-import time
 from math import inf
-from Packages import Package, Table, Node, Truck
+from Packages import Package, Table, Truck
 
 
 # Kyle McCray 000931226
 
 def import_packages():
-    fields = []
     rows = []
     pkgs_at_hub = []
 
     with open('pckgFiles.csv', newline='') as csvfile:
         row = csv.reader(csvfile, delimiter=",")
-        fields = next(row)
-        for row in row:
+        next(row)
+        for row in row: # linear time
             rows.append(row)
 
-    for row in rows:
+    for row in rows: # linear time
         id = row[0]
         address = row[1]
         city = row[2]
@@ -38,8 +36,8 @@ def import_addresses():
     rows = []
     with open('distanceTablesExtd.csv', newline='') as csvfile:
         row = csv.reader(csvfile, delimiter=",")
-        field = next(row)
-        for row in row:
+        next(row)
+        for row in row: # linear time
             rows.append(row)
 
     rows[0] = None
@@ -62,7 +60,7 @@ def import_addresses():
     for i in range(len(col)):
         rows[i] = []
 
-    for i in rows.keys():
+    for i in rows.keys(): # quadratic time
         x = col[i]
         y = x
         for z in y:
@@ -84,7 +82,7 @@ def make_nodes(rows):
 def make_graph(rows_dict):
     graph = []
 
-    for i in rows_dict.keys():
+    for i in rows_dict.keys(): # quadratic  time
         row = rows_dict[i]  # get a single row
         numbers = row[1:]  # numbers start after the second element
         graph.append([])
@@ -95,7 +93,7 @@ def make_graph(rows_dict):
     return graph
 
 
-def fun(graph, n):
+def shortest_distance(graph, n): # quadratic time
     distance = graph
     for k in range(0, n):
         for i in range(0, n):
@@ -113,15 +111,16 @@ delivered_packages = Table(None)
 packages_table = Table(packages_list)
 
 # assign each package the location number
-for x in range(len(locations_list)):
+for x in range(len(locations_list)): # quadratic time
     for y in range(len(packages_table.array)):
         if packages_table.array[y] is None:
             continue
         if packages_table.array[y].pk_address in locations_list[x]:
             packages_table.array[y].address_number = x
 
+
 g = make_graph(rows_dict)
-g = fun(g, 27)
+g = shortest_distance(g, 27)
 
 DELAYED_ON_FLIGHT = [6, 25, 28, 32]
 ONLY_ON_TRUCK_2 = [3, 36, 38, 18]
@@ -181,6 +180,7 @@ def add_packages(truck, packages_to_add=None):
     for x in truck.inv:
         x.update_status("ON TRUCK", truck.time.time())
 
+
     return truck
 
 
@@ -194,10 +194,10 @@ def deliver(g, truck, delivered_packages, no_more_packages=None):
         distance = float(inf)
         current_stop = -1
         for x in truck.inv:
-            z = x.address_number
-            if g[start][z] < distance:
-                distance = g[start][z]
-                current_stop = z
+            alt_stop = x.address_number
+            if g[start][alt_stop] < distance:
+                distance = g[start][alt_stop]
+                current_stop = alt_stop
         start = current_stop
         # Time = D/S
         # 18 Mph is how fast the truck goes
